@@ -10,14 +10,20 @@ export default function Hero() {
   const [blocked, setBlocked] = useState(false);
   const visible = useRef(true);
 
-  // try sound first; fall back to muted
+  // autoplay muted (browser policy); try sound after gesture unlock
   useEffect(() => {
     const v = vid.current; if (!v) return;
-    v.muted = false;
-    v.play().then(() => setSoundOn(true)).catch(() => {
-      v.muted = true; setSoundOn(false); setBlocked(true);
-      v.play().catch(() => {});
-    });
+    const tryPlay = () => {
+      v.muted = true;
+      setSoundOn(false);
+      v.play().then(() => setBlocked(true)).catch(() => setBlocked(true));
+    };
+    if (v.readyState >= 2) tryPlay();
+    else {
+      v.addEventListener("canplay", tryPlay, { once: true });
+      v.load();
+    }
+    return () => v.removeEventListener("canplay", tryPlay);
   }, []);
 
   // unlock sound on the first gesture
@@ -59,9 +65,8 @@ export default function Hero() {
         </div>
       </div>
       <div className="hero-vidwrap">
-        <video ref={vid} className="hero-vid" muted loop playsInline preload="auto" poster="/portrait-full.webp?v=8" aria-label={`Animated intro of ${PROFILE.name}, speaking a short self-introduction`}>
-          <source src="/hero/hero.webm?v=8" type="video/webm" />
-          <source src="/hero/hero.mp4?v=8" type="video/mp4" />
+        <video ref={vid} className="hero-vid" muted loop playsInline autoPlay preload="auto" poster="/portrait-full.webp?v=15" aria-label={`Animated intro of ${PROFILE.name}, speaking a short self-introduction`}>
+          <source src="/hero/hero.mp4?v=15" type="video/mp4" />
         </video>
       </div>
       <div className="hero-bar wrap">
@@ -88,8 +93,8 @@ export default function Hero() {
         .hero-track{display:flex;width:max-content;animation:hero-run 32s linear infinite}
         .hero-track-set{display:flex;gap:.16em;padding-right:.16em;font-weight:800;letter-spacing:-.06em;line-height:.8;font-size:clamp(72px,18vw,300px);color:#d4d4d4;white-space:nowrap}
         @keyframes hero-run{to{transform:translateX(-50%)}}
-        .hero-vidwrap{position:absolute;left:50%;top:0;height:100%;width:max-content;max-width:100%;transform:translateX(-50%);z-index:2;display:flex;align-items:flex-end;justify-content:center;pointer-events:none}
-        .hero-vid{height:100%;width:auto;max-width:100%;object-fit:contain;object-position:center bottom;display:block}
+        .hero-vidwrap{position:absolute;inset:0;z-index:2;display:grid;place-items:end center;pointer-events:none}
+        .hero-vid{height:100%;width:auto;object-fit:contain;object-position:center bottom;display:block;margin-inline:auto}
         .hero-bar{position:absolute;z-index:3;left:0;right:0;bottom:clamp(28px,5.5vh,64px);display:flex;align-items:flex-end;justify-content:space-between;gap:28px;pointer-events:none}
         .hero-bar>*{pointer-events:auto}
         .hero-copy{display:flex;flex-direction:column;align-items:flex-start;gap:14px;max-width:min(11ch,44vw)}
